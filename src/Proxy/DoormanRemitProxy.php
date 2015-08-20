@@ -14,6 +14,7 @@ use AsyncPHP\Remit\Client;
 use AsyncPHP\Remit\Client\ZeroMqClient;
 use AsyncPHP\Remit\Server;
 use AsyncPHP\Remit\Server\ZeroMqServer;
+use Closure;
 use LogicException;
 
 class DoormanRemitProxy implements Proxy
@@ -27,6 +28,11 @@ class DoormanRemitProxy implements Proxy
      * @var Server
      */
     protected $server;
+
+    /**
+     * @var Client
+     */
+    protected $client;
 
     /**
      * @var array
@@ -43,7 +49,7 @@ class DoormanRemitProxy implements Proxy
             $manager = new GroupProcessManager($manager);
         }
 
-        $manager->setWorker(realpath(__DIR__."/../../bin/worker.php"));
+        $manager->setWorker(realpath(__DIR__ . "/../../bin/worker.php"));
 
         $this->manager = $manager;
         $this->server = $server;
@@ -116,6 +122,8 @@ class DoormanRemitProxy implements Proxy
      */
     public function tick()
     {
+        $this->server->tick();
+
         if ($this->manager->tick()) {
             return true;
         }
@@ -134,7 +142,7 @@ class DoormanRemitProxy implements Proxy
                     return $task;
                 }
 
-                if (is_callable($task)) {
+                if ($task instanceof Closure) {
                     $task = new ProcessCallbackTask($task);
                 }
 
@@ -164,17 +172,22 @@ class DoormanRemitProxy implements Proxy
      */
     protected function newRemitClient()
     {
-        if ($this->server instanceof ZeroMqServer) {
-            return new ZeroMqClient($this->server->getLocation());
+        if (!$this->client) {
+            if ($this->server instanceof ZeroMqServer) {
+                $this->client = new ZeroMqClient($this->server->getLocation());
+            } else {
+                throw new LogicException("Unsupported Remit Server");
+            }
         }
 
-        throw new LogicException("Unsupported Remit Server");
+        return $this->client;
     }
 
     /**
      * @param mixed $task
      */
-    public static function worker($task) {
+    public static function worker($task)
+    {
         if ($task instanceof Task) {
             $handler = $task->getHandler();
 
@@ -184,5 +197,50 @@ class DoormanRemitProxy implements Proxy
                 $object->handle($task);
             }
         }
+    }
+
+    /**
+     * @inheritdoc
+     *
+     * @param string  $name
+     * @param Closure $closure
+     *
+     * @return $this
+     */
+    public function removeListener($name, Closure $closure)
+    {
+        $this->server->removeListener($name, $closure);
+
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     *
+     * @param string  $name
+     * @param Closure $closure
+     *
+     * @return $this
+     */
+    public function addListener($name, Closure $closure)
+    {
+        $this->server->addListener($name, $closure);
+
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     *
+     * @param string $name
+     * @param array  $parameters
+     *
+     * @return $this
+     */
+    public function emit($name, array $parameters = array())
+    {
+        $this->server->emit($name, $parameters);
+
+        return $this;
     }
 }

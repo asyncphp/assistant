@@ -3,6 +3,7 @@
 namespace AsyncPHP\Assistant;
 
 use AsyncPHP\Doorman\Task;
+use Closure;
 
 interface Proxy
 {
@@ -27,4 +28,22 @@ interface Proxy
      * @return bool
      */
     public function tick();
+
+    /**
+     * @param string  $name
+     * @param Closure $closure
+     */
+    public function removeListener($name, Closure $closure);
+
+    /**
+     * @param string  $name
+     * @param Closure $closure
+     */
+    public function addListener($name, Closure $closure);
+
+    /**
+     * @param string $name
+     * @param array  $parameters
+     */
+    public function emit($name, array $parameters = array());
 }

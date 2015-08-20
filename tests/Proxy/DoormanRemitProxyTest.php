@@ -2,9 +2,11 @@
 
 namespace AsyncPHP\Assistant\Tests\Proxy;
 
+use AsyncPHP\Assistant\Decorator\TaskDecorator;
 use AsyncPHP\Assistant\Proxy;
 use AsyncPHP\Assistant\Proxy\DoormanRemitProxy;
 use AsyncPHP\Assistant\Tests\Test;
+use AsyncPHP\Doorman\Handler;
 use AsyncPHP\Doorman\Manager\ProcessManager;
 use AsyncPHP\Remit\Location\InMemoryLocation;
 use AsyncPHP\Remit\Server\ZeroMqServer;
@@ -15,37 +17,24 @@ use AsyncPHP\Remit\Server\ZeroMqServer;
 class DoormanRemitProxyTest extends Test
 {
     /**
-     * @var DoormanRemitProxy
-     */
-    protected $proxy;
-
-    /**
-     * @inheritdoc
-     */
-    public function setUp()
-    {
-        parent::setUp();
-
-        $this->proxy = new DoormanRemitProxy(
-            new ProcessManager(),
-            new ZeroMqServer(
-                new InMemoryLocation("127.0.0.1", 5555)
-            )
-        );
-    }
-
-    /**
      * @test
      */
     public function isRunsTasksInParallel()
     {
-        @unlink(__DIR__ . "/parallel1.temp");
-        @unlink(__DIR__ . "/parallel2.temp");
-        @unlink(__DIR__ . "/parallel3.temp");
+        $this->unlink(__DIR__ . "/parallel1.temp");
+        $this->unlink(__DIR__ . "/parallel2.temp");
+        $this->unlink(__DIR__ . "/parallel3.temp");
 
         $valid = true;
 
-        $this->proxy
+        $proxy = new DoormanRemitProxy(
+            new ProcessManager(),
+            new ZeroMqServer(
+                new InMemoryLocation("127.0.0.1", 5556)
+            )
+        );
+
+        $proxy
             ->parallel(function () {
                 touch(__DIR__ . "/parallel1.temp");
             })
@@ -79,14 +68,44 @@ class DoormanRemitProxyTest extends Test
                 },
             ));
 
-        while ($this->proxy->tick()) {
+        while ($proxy->tick()) {
             usleep(25000);
         }
 
         $this->assertTrue($valid);
 
-        @unlink(__DIR__ . "/parallel1.temp");
-        @unlink(__DIR__ . "/parallel2.temp");
-        @unlink(__DIR__ . "/parallel3.temp");
+        $this->unlink(__DIR__ . "/parallel1.temp");
+        $this->unlink(__DIR__ . "/parallel2.temp");
+        $this->unlink(__DIR__ . "/parallel3.temp");
+    }
+
+    /**
+     * @test
+     */
+    public function itEmitsEvents()
+    {
+        $proxy = new DoormanRemitProxy(
+            new ProcessManager(),
+            new ZeroMqServer(
+                new InMemoryLocation("127.0.0.1", 5557)
+            )
+        );
+
+        $passes = false;
+
+        $proxy->addListener("custom event", function ($value) use (&$passes) {
+            $passes = $value;
+        });
+
+        $proxy->parallel(function (Handler $handler, TaskDecorator $task) {
+            $task->emit("custom event", array(true));
+            sleep(1);
+        });
+
+        while ($proxy->tick()) {
+            usleep(25000);
+        }
+
+        $this->assertTrue($passes);
     }
 }
