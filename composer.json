@@ -1,0 +1,21 @@
+{
+    "require": {
+        "asyncphp/doorman": "dev-pass-more-context-to-closures",
+        "asyncphp/remit": "dev-enable-serialization"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^4.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "AsyncPHP\\Assistant\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AsyncPHP\\Assistant\\Tests\\": "tests"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
