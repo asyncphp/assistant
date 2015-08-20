@@ -2,9 +2,9 @@
 
 namespace AsyncPHP\Assistant\Tests\Proxy;
 
-use AsyncPHP\Assistant\Decorator\TaskDecorator;
 use AsyncPHP\Assistant\Proxy;
-use AsyncPHP\Assistant\Proxy\DoormanRemitProxy;
+use AsyncPHP\Assistant\Proxy\DoormanProxy;
+use AsyncPHP\Assistant\Task\DoormanTask;
 use AsyncPHP\Assistant\Tests\Test;
 use AsyncPHP\Doorman\Handler;
 use AsyncPHP\Doorman\Manager\ProcessManager;
@@ -12,9 +12,9 @@ use AsyncPHP\Remit\Location\InMemoryLocation;
 use AsyncPHP\Remit\Server\ZeroMqServer;
 
 /**
- * @covers AsyncPHP\Assistant\Proxy\DoormanRemitProxy
+ * @covers AsyncPHP\Assistant\Proxy\DoormanProxy
  */
-class DoormanRemitProxyTest extends Test
+class DoormanProxyTest extends Test
 {
     /**
      * @test
@@ -27,10 +27,10 @@ class DoormanRemitProxyTest extends Test
 
         $valid = true;
 
-        $proxy = new DoormanRemitProxy(
-            new ProcessManager(),
-            new ZeroMqServer(
-                new InMemoryLocation("127.0.0.1", 5556)
+        $proxy = new DoormanProxy(
+            $manager = new ProcessManager(),
+            $server = new ZeroMqServer(
+                new InMemoryLocation("127.0.0.1", 5555)
             )
         );
 
@@ -84,10 +84,10 @@ class DoormanRemitProxyTest extends Test
      */
     public function itEmitsEvents()
     {
-        $proxy = new DoormanRemitProxy(
-            new ProcessManager(),
-            new ZeroMqServer(
-                new InMemoryLocation("127.0.0.1", 5557)
+        $proxy = new DoormanProxy(
+            $manager = new ProcessManager(),
+            $server = new ZeroMqServer(
+                new InMemoryLocation("127.0.0.1", 5555)
             )
         );
 
@@ -97,7 +97,7 @@ class DoormanRemitProxyTest extends Test
             $passes = $value;
         });
 
-        $proxy->parallel(function (Handler $handler, TaskDecorator $task) {
+        $proxy->parallel(function (Handler $handler, DoormanTask $task) {
             $task->emit("custom event", array(true));
             sleep(1);
         });

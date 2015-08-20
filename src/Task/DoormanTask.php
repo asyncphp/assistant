@@ -1,6 +1,6 @@
 <?php
 
-namespace AsyncPHP\Assistant\Decorator;
+namespace AsyncPHP\Assistant\Task;
 
 use AsyncPHP\Doorman\Cancellable;
 use AsyncPHP\Doorman\Expires;
@@ -8,7 +8,7 @@ use AsyncPHP\Doorman\Process;
 use AsyncPHP\Doorman\Task;
 use AsyncPHP\Remit\Client;
 
-class TaskDecorator implements Cancellable, Expires, Process, Task
+class DoormanTask implements Cancellable, Expires, Process, Task
 {
     /**
      * @var Task
@@ -26,7 +26,7 @@ class TaskDecorator implements Cancellable, Expires, Process, Task
     protected $hash;
 
     /**
-     * @param Task   $task
+     * @param Task $task
      * @param Client $client
      */
     public function __construct(Task $task, Client $client)
@@ -231,7 +231,7 @@ class TaskDecorator implements Cancellable, Expires, Process, Task
      */
     public function __call($method, array $parameters = array())
     {
-        return call_user_func_array([$this->task, $method], $parameters);
+        return call_user_func_array(array($this->task, $method), $parameters);
     }
 
     /**

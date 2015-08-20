@@ -1,11 +1,12 @@
 <?php
 
-namespace AsyncPHP\Assistant\Decorator;
+namespace AsyncPHP\Assistant\Handler;
 
+use AsyncPHP\Assistant\Task\DoormanTask;
 use AsyncPHP\Doorman\Handler;
 use AsyncPHP\Doorman\Task;
 
-class HandlerDecorator implements Handler
+class DoormanHandler implements Handler
 {
     /**
      * @var Handler
@@ -27,12 +28,22 @@ class HandlerDecorator implements Handler
      */
     public function handle(Task $task)
     {
-        if ($task instanceof TaskDecorator) {
+        if ($task instanceof DoormanTask) {
             $this->emitTaskDecoratorId($task);
-
         }
 
         $this->handler->handle($task);
+    }
+
+    /**
+     * @param DoormanTask $decorator
+     */
+    protected function emitTaskDecoratorId(DoormanTask $decorator)
+    {
+        $id = getmypid();
+        $hash = $decorator->getHash();
+
+        $decorator->emit("assistant.pid", array($id, $hash));
     }
 
     /**
@@ -45,17 +56,6 @@ class HandlerDecorator implements Handler
      */
     public function __call($method, array $parameters = array())
     {
-        return call_user_func_array([$this->handler, $method], $parameters);
-    }
-
-    /**
-     * @param TaskDecorator $decorator
-     */
-    protected function emitTaskDecoratorId(TaskDecorator $decorator)
-    {
-        $id = getmypid();
-        $hash = $decorator->getHash();
-
-        $decorator->emit("assistant.pid", array($id, $hash));
+        return call_user_func_array(array($this->handler, $method), $parameters);
     }
 }

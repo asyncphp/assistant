@@ -1,5 +1,9 @@
 <?php
 
+use AsyncPHP\Assistant\Handler\DoormanHandler;
+use AsyncPHP\Doorman\Handler;
+use AsyncPHP\Doorman\Task;
+
 $paths = array(
     __DIR__ . "/../../../autoload.php",
     __DIR__ . "/../vendor/autoload.php",
@@ -10,10 +14,6 @@ foreach ($paths as $path) {
         require $path;
     }
 }
-
-use AsyncPHP\Assistant\Proxy\DoormanRemitProxy;
-use AsyncPHP\Doorman\Handler;
-use AsyncPHP\Doorman\Task;
 
 if (count($argv) < 2) {
     throw new InvalidArgumentException("Invalid call");
@@ -28,4 +28,13 @@ $task = array_shift($argv);
  */
 $task = @unserialize(base64_decode($task));
 
-DoormanRemitProxy::worker($task);
+if ($task instanceof Task) {
+    $handler = $task->getHandler();
+
+    $object = new $handler();
+
+    if ($object instanceof Handler) {
+        $object = new DoormanHandler($object);
+        $object->handle($task);
+    }
+}

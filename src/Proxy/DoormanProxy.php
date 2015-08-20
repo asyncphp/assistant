@@ -2,12 +2,13 @@
 
 namespace AsyncPHP\Assistant\Proxy;
 
-use AsyncPHP\Assistant\Decorator\HandlerDecorator;
-use AsyncPHP\Assistant\Decorator\TaskDecorator;
+use AsyncPHP\Assistant\Handler\DoormanHandler;
 use AsyncPHP\Assistant\Proxy;
+use AsyncPHP\Assistant\Task\DoormanTask;
 use AsyncPHP\Doorman\Handler;
 use AsyncPHP\Doorman\Manager;
 use AsyncPHP\Doorman\Manager\GroupProcessManager;
+use AsyncPHP\Doorman\Manager\ProcessManager;
 use AsyncPHP\Doorman\Task;
 use AsyncPHP\Doorman\Task\ProcessCallbackTask;
 use AsyncPHP\Remit\Client;
@@ -17,10 +18,10 @@ use AsyncPHP\Remit\Server\ZeroMqServer;
 use Closure;
 use LogicException;
 
-class DoormanRemitProxy implements Proxy
+class DoormanProxy implements Proxy
 {
     /**
-     * @var Manager
+     * @var GroupProcessManager
      */
     protected $manager;
 
@@ -45,11 +46,13 @@ class DoormanRemitProxy implements Proxy
      */
     public function __construct(Manager $manager, Server $server)
     {
+        if ($manager instanceof ProcessManager) {
+            $manager->setWorker(realpath(__DIR__ . "/../../bin/worker.php"));
+        }
+
         if (!$manager instanceof GroupProcessManager) {
             $manager = new GroupProcessManager($manager);
         }
-
-        $manager->setWorker(realpath(__DIR__ . "/../../bin/worker.php"));
 
         $this->manager = $manager;
         $this->server = $server;
@@ -69,6 +72,24 @@ class DoormanRemitProxy implements Proxy
     public function getServer()
     {
         return $this->server;
+    }
+
+    /**
+     * @return Client
+     *
+     * @throws LogicException
+     */
+    public function getClient()
+    {
+        if (!$this->client) {
+            if ($this->server instanceof ZeroMqServer) {
+                $this->client = new ZeroMqClient($this->server->getLocation());
+            } else {
+                throw new LogicException("Unsupported Remit Server");
+            }
+        }
+
+        return $this->client;
     }
 
     /**
@@ -128,6 +149,8 @@ class DoormanRemitProxy implements Proxy
             return true;
         }
 
+        $this->server->tick();
+
         if (empty($this->waiting)) {
             return false;
         }
@@ -135,10 +158,12 @@ class DoormanRemitProxy implements Proxy
         $next = array_shift($this->waiting);
 
         if ($next["type"] === "parallel") {
-            $client = $this->newRemitClient();
+            $client = $this->getClient();
 
-            $tasks = array_filter(array_map(function ($task) use ($client) {
-                if ($task instanceof TaskDecorator) {
+            $tasks = $next["tasks"];
+
+            $tasks = array_map(function ($task) use ($client) {
+                if ($task instanceof Task) {
                     return $task;
                 }
 
@@ -147,56 +172,36 @@ class DoormanRemitProxy implements Proxy
                 }
 
                 if ($task instanceof Task) {
-                    return new TaskDecorator($task, $client);
+                    return new DoormanTask($task, $client);
                 }
 
-                return null;
-            }, $next["tasks"]));
+                return $task;
+            }, $tasks);
+
+            $tasks = array_filter($tasks, function ($task) {
+                return $task instanceof Task;
+            });
 
             $this->manager->addTaskGroup($tasks);
         }
 
         if ($next["type"] === "synchronous") {
             foreach ($next["tasks"] as $task) {
-                static::worker($task);
+                if ($task instanceof Task) {
+                    $handler = $task->getHandler();
+
+                    $object = new $handler();
+
+                    if ($object instanceof Handler) {
+                        $object = new DoormanHandler($object);
+                        $object->handle($task);
+                    }
+                }
+
             }
         }
 
         return true;
-    }
-
-    /**
-     * @return Client
-     *
-     * @throws LogicException
-     */
-    protected function newRemitClient()
-    {
-        if (!$this->client) {
-            if ($this->server instanceof ZeroMqServer) {
-                $this->client = new ZeroMqClient($this->server->getLocation());
-            } else {
-                throw new LogicException("Unsupported Remit Server");
-            }
-        }
-
-        return $this->client;
-    }
-
-    /**
-     * @param mixed $task
-     */
-    public static function worker($task)
-    {
-        if ($task instanceof Task) {
-            $handler = $task->getHandler();
-
-            $object = new HandlerDecorator(new $handler());
-
-            if ($object instanceof Handler) {
-                $object->handle($task);
-            }
-        }
     }
 
     /**
