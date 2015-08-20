@@ -44,7 +44,6 @@ class DoormanRemitProxy implements Proxy
         }
 
         $manager->setWorker(realpath(__DIR__."/../../bin/worker.php"));
-        $manager->setLogPath(__DIR__);
 
         $this->manager = $manager;
         $this->server = $server;
