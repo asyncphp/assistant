@@ -7,6 +7,7 @@ use AsyncPHP\Assistant\Tests\Test;
 use AsyncPHP\Doorman\Handler;
 use AsyncPHP\Doorman\Manager\ProcessManager;
 use AsyncPHP\Doorman\Task;
+use AsyncPHP\Doorman\Task\CallbackTask;
 use AsyncPHP\Doorman\Task\ProcessCallbackTask;
 use AsyncPHP\Remit\Client\ZeroMqClient;
 use AsyncPHP\Remit\Location\InMemoryLocation;
@@ -42,7 +43,17 @@ class TaskDecoratorTest extends Test
      */
     public function itSerializes()
     {
-        $this->markTestIncomplete();
+        $decorator = new TaskDecorator(
+            new CallbackTask(function(){
+                print "hello world";
+            }),
+            $this->newZeroMqClient()
+        );
+
+        $this->assertEquals(
+            $decorator,
+            unserialize(serialize($decorator))
+        );
     }
 
     /**
@@ -52,7 +63,7 @@ class TaskDecoratorTest extends Test
     {
         $task = new ProcessCallbackTask(function (Handler $handler, Task $task){
             $task->emit("custom event");
-            sleep(3);
+            sleep(1);
         });
 
         $decorator = new TaskDecorator($task, $this->newZeroMqClient());

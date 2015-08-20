@@ -21,7 +21,8 @@ interface Proxy
     public function synchronous($tasks);
 
     /**
-     * Executes a single processing cycle. This should be run repeatedly, and will return false when there are no more running or waiting processes.
+     * Executes a single processing cycle. This should be run repeatedly, and will return false
+     * when there are no more running or waiting processes.
      *
      * @return bool
      */

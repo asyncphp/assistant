@@ -48,7 +48,6 @@ class DoormanRemitProxyTest extends Test
         $this->proxy
             ->parallel(function () {
                 touch(__DIR__ . "/parallel1.temp");
-                sleep(1);
             })
             ->synchronous(function () use (&$valid) {
                 if (!file_exists(__DIR__ . "/parallel1.temp")) {
@@ -60,11 +59,9 @@ class DoormanRemitProxyTest extends Test
             ->parallel(array(
                 function () {
                     touch(__DIR__ . "/parallel2.temp");
-                    sleep(1);
                 },
                 function () {
                     touch(__DIR__ . "/parallel3.temp");
-                    sleep(1);
                 },
             ))
             ->synchronous(array(
