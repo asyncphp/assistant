@@ -87,5 +87,9 @@ class DoormanRemitProxyTest extends Test
         }
 
         $this->assertTrue($valid);
+
+        @unlink(__DIR__ . "/parallel1.temp");
+        @unlink(__DIR__ . "/parallel2.temp");
+        @unlink(__DIR__ . "/parallel3.temp");
     }
 }
