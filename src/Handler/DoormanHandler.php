@@ -36,14 +36,14 @@ class DoormanHandler implements Handler
     }
 
     /**
-     * @param DoormanTask $decorator
+     * @param DoormanTask $task
      */
-    protected function emitTaskDecoratorId(DoormanTask $decorator)
+    protected function emitTaskDecoratorId(DoormanTask $task)
     {
         $id = getmypid();
-        $hash = $decorator->getHash();
+        $hash = $task->getHash();
 
-        $decorator->emit("assistant.pid", array($id, $hash));
+        $task->emit("assistant.pid", array($id, $hash));
     }
 
     /**

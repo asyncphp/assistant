@@ -1,7 +1,8 @@
 {
     "require": {
-        "asyncphp/doorman": "dev-pass-more-context-to-closures",
-        "asyncphp/remit": "dev-enable-serialization"
+        "php": ">=5.5.9",
+        "asyncphp/doorman": "^2.0",
+        "asyncphp/remit": "^2.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^4.8"
